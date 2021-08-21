@@ -80,6 +80,7 @@ try {
     switch(contract.toLowerCase()) {
       case "contracts":
         fs.ensureDirSync(path.resolve(buildPath, contract));
+        fs.ensureDirSync(path.resolve(buildPath, "abi"));
         fs.ensureDirSync(path.resolve(buildPath, "bytecode"));
         fs.ensureDirSync(path.resolve(buildPath, "functions"));
         for (let c in output[contract]) {
@@ -94,6 +95,11 @@ try {
             fs.writeFileSync(
               path.resolve(buildPath, "bytecode", fileName.replace('.json', '.hex')),
               output[contract][c][Object.keys(output[contract][c])[0]].evm.bytecode.object
+            );
+            console.log(`Writing ${path.resolve(buildPath, "abi", fileName)}`);
+            fs.writeFileSync(
+              path.resolve(buildPath, "abi", fileName),
+              JSON.stringify(output[contract][c][Object.keys(output[contract][c])[0]].abi, null, 2)
             );
             console.log(`Writing ${path.resolve(buildPath, "functions", fileName)}`);
             console.log(JSON.stringify(

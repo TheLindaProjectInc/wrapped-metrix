@@ -253,11 +253,13 @@
                 iface.functions[key].stateMutability !== "payable"
               ) {
                 getResponse = async () => {
+                  console.log()
                   const response = JSON.parse(
                     JSON.stringify(
                       await window.metrimask.rpcProvider.rawCall(
                         "callcontract",
-                        [contract, encoded.replace("0x", "")]
+                        [contract, encoded.replace("0x", "")],
+                        
                       )
                     )
                   ).executionResult.output;

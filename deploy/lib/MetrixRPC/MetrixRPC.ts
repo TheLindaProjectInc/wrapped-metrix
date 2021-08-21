@@ -701,6 +701,31 @@ abstract class MetrixRPC {
     );
   }
 
+  public promiseGetTransactionReceipt(txid: string): Promise<any> {
+    return new Promise<any>(
+      (resolve: (result: any) => any, reject: (e: Error) => any): void => {
+        this.getTransactionReceipt(
+          txid,
+          (e: Error | null, result: any): void => {
+            if (e) reject(e);
+            else resolve(result);
+          }
+        );
+      }
+    );
+  }
+
+  public getTransactionReceipt(
+    txid: string,
+    callback: (e: Error | null, result: any) => any
+  ): void {
+    this.callDaemon(
+      "gettransactionreceipt",
+      "[ " + JSON.stringify(txid) + " ]",
+      callback
+    );
+  }
+
   public promiseGetTxOut(txid: string, vout: number): Promise<any> {
     return new Promise<any>(
       (resolve: (result: any) => any, reject: (e: Error) => any): void => {
