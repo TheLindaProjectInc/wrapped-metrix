@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Wrapped Metrix</title>
+  <meta name="description" content="A debug page for Wrapped Metrix MRC20" />
+  <meta name="author" content="SeqSEE" />
+
+  <meta property="og:title" content="A debug page for Wrapped Metrix MRC20" />
+  <meta property="og:type" content="website" />
+  <meta property="og:description" content="A debug page for Wrapped Metrix MRC20" />
+
+  <link rel="icon" href="/favicon.ico" />
+
+  <meta charset="utf-8" />
+  <title>Semantic UI CDN</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.9/semantic.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.9/semantic.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.1.1.min.js"
+    integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+  <style>
+    label {
+      font-family: monospace !important;
+    }
+
+    body {
+      font-family: monospace !important;
+      background-color: whitesmoke !important;
+      -ms-overflow-style: none;
+      /* IE and Edge */
+      scrollbar-width: none;
+      /* Firefox */
+
+    }
+  </style>
+</head>
+
+<body>
+  <div style="height: 100%" class="ui grid middle aligned padded">
+    <div class="row stretched">
+      <div class="column stretched">
+        <div class="ui grid stackable centered padded very">
+          <div class="two wide column stretched middle aligned">
+            <h2 class="ui header icon">Wrapped Metrix</h2>
+          </div>
+          <div class="six wide column stretched middle aligned" id="contract"></div>
+          <div class="six wide column stretched middle aligned" id="balance"></div>
+          <div class="sixteen wide column middle aligned">
+            <div class="ui hidden message error compact" id="errMsg"></div>
+          </div>
+          <div class="sixteen wide column stretched">
+            <div class="ui grid stackable centered" id="functions"></div>
+          </div>
+          <div class="sixteen wide column stretched align left">
+            <div class="ui grid stackable centered" id="events"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- content here... -->
+  <script type="text/javascript" src="./abi.json"></script>
+  <script src="/js/bs58.bundle.js"></script>
+  <script type="module">
+    import { ethers } from "/js/ethers-5.2.esm.min.js";
+
+    const contract = "71c2f8574e7b5fb9040be8b252c3707823a9de67";
+
+    let loggedIn = false;
+    let loaded = false;
+    let hexAddress = "";
+
+    const b58Prefix = {
+      MainNet: 0x32,
+      TestNet: 0x6e,
+    };
+
+    const toHexAddress = (address) => {
+      const bytes = bs58.decode(address);
+      const hex = bytes.toString("hex");
+      return hex.substring(2, hex.length - 8);
+    };
+
+    const fromHexAddress = (network, hex) => {
+      if (hex.length !== 40) {
+        return undefined;
+      }
+      let bytes = [];
+      for (let c = 0; c < hex.length; c += 2)
+        bytes.push(parseInt(hex.substr(c, 2), 16));
+      const hash = ethers.utils.arrayify(
+        ethers.utils.sha256(
+          ethers.utils.sha256([b58Prefix[network], ...bytes])
+        )
+      );
+      const checksum = [hash[0], hash[1], hash[2], hash[3]];
+      return bs58.encode([b58Prefix[network], ...bytes, ...checksum]);
+    };
+
+    function handleAccountChanged(data) {
+      const account = data.account;
+      if (account && account.loggedIn) {
+        loggedIn = true;
+        const address  = account.address;
+        hexAddress = toHexAddress(address);
+        document.getElementById("contract").innerHTML = "";
+        document.getElementById("balance").innerHTML = "";
+        document.getElementById("functions").innerHTML = "";
+        document.getElementById("events").innerHTML = "";
+        document.getElementById("errMsg").classList.add("hidden");
+        setup();
+        if (!loaded) {
+          loaded = true;
+          getContract();
+          
+        }
+      } else {
+        console.log(JSON.stringify(data));
+
+        if (!window.metrimask.account || !window.metrimask.account.loggedIn) {
+          loggedIn = false;
+          loaded = false;
+          hexAddress = "";
+          document.getElementById("contract").innerHTML = "";
+          document.getElementById("balance").innerHTML = "";
+          document.getElementById("functions").innerHTML = "";
+          document.getElementById("events").innerHTML = "";
+          document.getElementById(
+            "errMsg"
+          ).innerHTML = `<div class="header">Error</div><p>Not logged in. Please log in to MetriMask to continue.</p>`;
+          document.getElementById("errMsg").classList.remove("hidden");
+        }
+
+      }
+    }
+
+    // Handle incoming messages
+    function handleMessage(message) {
+      if (message.data && message.data.target) {
+        if (
+          message.data.target.startsWith("metrimask") &&
+          message.data.message
+        ) {
+          switch (message.data.message.type) {
+            case "GET_INPAGE_METRIMASK_ACCOUNT_VALUES":
+              console.log("Updating MetriMask context");
+              break;
+            case "METRIMASK_ACCOUNT_CHANGED":
+              handleAccountChanged(message.data.message.payload);
+              break;
+            case "METRIMASK_INSTALLED_OR_UPDATED":
+              window.location.reload();
+              break;
+            case "SIGN_TX_URL_RESOLVED":
+              break;
+            case "RPC_REQUEST":
+              break;
+            case "RPC_RESPONSE":
+              break;
+            case "RPC_SEND_TO_CONTRACT":
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    }
+
+    window.addEventListener("message", handleMessage, false);
+    console.log("Connecting MetriMask");
+    window.postMessage({ message: { type: "CONNECT_METRIMASK" } }, "*");
+
+
+    const setup = async () => {
+      const abi = JSON.parse(JSON.stringify(await (await fetch('/abi.json')).json()));
+      const iface = new ethers.utils.Interface(abi);
+
+      const functionSignature = (functionName) => {
+        const fragment = iface.getFunction(functionName);
+        return iface.getSighash(fragment).replace("0x", "");
+      };
+
+      const setupFunctions = async () => {
+        const loader = document.createElement("div");
+        loader.className = "ui active loader";
+        document.getElementById("functions").appendChild(loader);
+        let colCount = 0;
+        for (const key of Object.keys(iface.functions)) {
+          const sig = functionSignature(key);
+          const segment = document.createElement("div");
+          let color = "violet";
+          switch (iface.functions[key].stateMutability) {
+            case "payable":
+              color = "pink";
+              break;
+            case "nonpayable":
+              color = "purple";
+              break;
+            default:
+              break;
+          }
+          segment.className = `ui segment ${color}`;
+          segment.style.opacity = "0.88";
+          const column = document.createElement("div");
+          column.className = "eight wide column stretched";
+          const form = document.createElement("form");
+          form.className = "ui form";
+          form.id = sig;
+          form.onsubmit = (event) => {
+            document.getElementById(
+              `${sig}Msg`
+            ).innerHTML = ``;
+            document
+              .getElementById(`${sig}Msg`)
+              .classList.remove("negative");
+            document
+              .getElementById(`${sig}Msg`)
+              .classList.add("hidden");
+            const tmp = new FormData(document.getElementById(sig));
+            var object = {};
+            tmp.forEach((value, key) => {
+              object[key] = value;
+            });
+            const values = [];
+            let i = 0;
+            try {
+              if (iface.functions[key].inputs.length > 0) {
+                for (const [k, v] of Object.entries(object)) {
+                  if (v) values.push(v);
+                  else values.push("");
+                  if (i <= iface.functions[key].inputs.length - 1) {
+
+                    const x = iface.functions[key].inputs[i++];
+                    const encoded = ethers.utils.defaultAbiCoder.encode(
+                      [x.type],
+                      [v ? v : ""]
+                    );
+                  }
+                }
+              }
+
+
+              const encoded = iface.encodeFunctionData(key, values);
+              let getResponse;
+              if (
+                iface.functions[key].stateMutability !== "nonpayable" &&
+                iface.functions[key].stateMutability !== "payable"
+              ) {
+                getResponse = async () => {
+                  const response = JSON.parse(
+                    JSON.stringify(
+                      await window.metrimask.rpcProvider.rawCall(
+                        "callcontract",
+                        [contract, encoded.replace("0x", "")]
+                      )
+                    )
+                  ).executionResult.output;
+                  let decoded = iface.decodeFunctionResult(
+                    key,
+                    `0x${response}`
+                  );
+                  decoded = decoded.map((data) => {
+                    return `${data}`.startsWith("0x")
+                      ? `${data}`.substring(2)
+                      : `${data}`;
+                  });
+                  const msg =
+                    decoded && decoded.join(" ").length > 0
+                      ? decoded.join(" ")
+                      : "No Response";
+                  document.getElementById(
+                    `${sig}Msg`
+                  ).innerHTML = `<div class="header">Response</div><p>${msg}</p>`;
+                  document
+                    .getElementById(`${sig}Msg`)
+                    .classList.remove("hidden");
+                };
+              } else {
+                if (iface.functions[key].stateMutability !== "payable") {
+                  object.value = 0;
+                }
+                getResponse = async () => {
+                  const response = JSON.parse(
+                    JSON.stringify(
+                      await window.metrimask.rpcProvider.rawCall(
+                        "sendtocontract",
+                        [
+                          contract,
+                          encoded.replace("0x", ""),
+                          object.value,
+                          250000,
+                          5000,
+                        ]
+                      )
+                    )
+                  ); //.executionResult.output;
+                  console.log(JSON.stringify(response));
+                  const msg =
+                    response && JSON.stringify(response).length > 0
+                      ? JSON.stringify(response)
+                      : "No Response";
+                  document
+                    .getElementById(`${sig}Msg`)
+                    .classList.remove("negative");
+                  document.getElementById(
+                    `${sig}Msg`
+                  ).innerHTML = `<div class="header">Response</div><p>${msg}</p>`;
+                  document
+                    .getElementById(`${sig}Msg`)
+                    .classList.remove("hidden");
+                };
+              }
+              getResponse();
+            } catch (e) {
+              const msg = e.message ? e.message : "An error occurred";
+              document
+                .getElementById(`${sig}Msg`)
+                .classList.add("negative");
+              document.getElementById(
+                `${sig}Msg`
+              ).innerHTML = `<div class="header">Error</div><p>${msg}</p>`;
+              document
+                .getElementById(`${sig}Msg`)
+                .classList.remove("hidden");
+            }
+            return false;
+          };
+
+          const functionTitle = document.createElement("div");
+          functionTitle.className = "field";
+          const label = document.createElement("label");
+          label.innerHTML = key;
+          functionTitle.appendChild(label);
+          form.appendChild(functionTitle);
+          const msg = document.createElement("div");
+          msg.className = "ui hidden message";
+          msg.id = `${sig}Msg`;
+          msg.style['word-break'] = 'break-all';
+          form.appendChild(msg);
+          for (const finput of iface.functions[key].inputs) {
+            const field = document.createElement("div");
+            field.className = "field";
+            const input = document.createElement("div");
+            input.className = "ui labeled input";
+            input.innerHTML = `<div class="ui label ${color} inverted">${finput.type}:${finput.name}</div><input type="text" name="${finput.name}" />`;
+            field.appendChild(input);
+            form.appendChild(field);
+          }
+          if (iface.functions[key].stateMutability === "payable") {
+            const field = document.createElement("div");
+            field.className = "field";
+            const input = document.createElement("div");
+            input.className = "ui labeled input";
+            input.innerHTML = `<div class="ui label ${color} inverted">Value</div><input type="number" name="value" value="0.00000000" />`;
+            field.appendChild(input);
+            form.appendChild(field);
+          }
+          const submit = document.createElement("button");
+          submit.className = `ui button ${color}`;
+          submit.innerHTML = "Call";
+          form.appendChild(submit);
+          segment.appendChild(form);
+          column.appendChild(segment);
+          document.getElementById("functions").appendChild(column);
+          colCount++;
+        }
+        if (colCount % 2 !== 0) {
+          for (let i = 0; i < colCount % 2; i++) {
+            const column = document.createElement("div");
+            column.className = "eight wide column stretched";
+            document.getElementById("functions").appendChild(column);
+          }
+        }
+        document.getElementById("functions").removeChild(loader);
+      };
+
+      setupFunctions();
+      const getAllLogs = async () => {
+        let logs = JSON.parse(
+          JSON.stringify(
+            await (
+              await fetch(
+                `https://testnet-explorer.metrixcoin.com/api/searchlogs?contract=${contract}`
+              )
+            ).json()
+          )
+        ).logs;
+        const eventMap = new Map();
+        for (const log of logs) {
+          const topics = log.topics.map((topic) => {
+            return `0x${topic}`;
+          });
+          const data = `0x${log.data}`;
+          const description = iface.parseLog({ data, topics });
+          const event = description.eventFragment;
+
+          if (description && event) {
+            const name = event.name;
+            let events = eventMap.get(name) ? eventMap.get(name) : [];
+            events.push({ event, description, timestamp: log.timestamp });
+            eventMap.set(name, events);
+          }
+        }
+        let step = 0;
+        let colors = ["violet", "purple", "pink"];
+        const eventTitle = document.createElement("h4");
+        eventTitle.className = "ui header";
+        eventTitle.innerHTML = "Event Logs";
+        document.getElementById("events").appendChild(eventTitle);
+        for (const key of eventMap.keys()) {
+          if (step == 3) step = 0;
+          let color = colors[step % 3];
+          step++;
+          const events = eventMap.get(key) ? eventMap.get(key) : [];
+          const segment = document.createElement("div");
+          segment.className = "sixteen wide column stretched";
+          segment.style.opacity = "0.88";
+          segment.innerHTML = `<table class="ui fixed single line celled striped table ${color}">
+                        <thead>
+                            <tr>
+                                <th colspan="${events[0].event.inputs.length + 1}">${key}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="${key}">
+
+                        </tbody>
+                    </table>`;
+
+          document.getElementById("events").appendChild(segment);
+          const headrow = document.createElement("tr");
+          for (let i = 0; i < events[0].event.inputs.length; i++) {
+            const datum = document.createElement("td");
+            datum.innerHTML = `<h5>${events[0].event.inputs[i].name
+              .charAt(0)
+              .toUpperCase()}${events[0].event.inputs[i].name.slice(1)}</h5>`;
+            headrow.appendChild(datum);
+          }
+          const ts = document.createElement("td");
+          ts.innerHTML = "<h5>Timestamp</h5>";
+          headrow.appendChild(ts);
+          document.getElementById(key).appendChild(headrow);
+          for (const event of events) {
+            const args = event.description.args;
+            const row = document.createElement("tr");
+            for (let i = 0; i < args.length; i++) {
+              const datum = document.createElement("td");
+
+              datum.setAttribute(
+                "data-label",
+                `${event.event.inputs[i].name
+                  .charAt(0)
+                  .toUpperCase()}${event.event.inputs[i].name.slice(1)}`
+              );
+              datum.innerHTML = `${args[i]["hex"] ? args[i]["hex"] : args[i]}`;
+              row.appendChild(datum);
+            }
+            const ts = document.createElement("td");
+            ts.setAttribute("data-label", "Timestamp");
+            ts.className = "collapsing";
+            ts.innerHTML = new Date(event.timestamp * 1000).toLocaleString();
+            row.appendChild(ts);
+            document.getElementById(key).appendChild(row);
+          }
+        }
+      };
+      getAllLogs();
+    }
+
+
+    const getContract = async () => {
+      document.getElementById(
+        "contract"
+      ).innerHTML = `<div class="ui active loader"></div>`;
+      document.getElementById(
+        "balance"
+      ).innerHTML = `<div class="ui active loader"></div>`;
+      try {
+        let contractDetails = JSON.parse(
+          JSON.stringify(
+            await (
+              await fetch(
+                `https://testnet-explorer.metrixcoin.com/api/contract/${contract}`
+              )
+            ).json()
+          )
+        );
+
+        document.getElementById(
+          "contract"
+        ).innerHTML = `<h3 class="ui header">Contract Address<h4 class="sub header">${contract}</h4></h3>`;
+
+        document.getElementById(
+          "balance"
+        ).innerHTML = `<h3 class="ui header">Contract Balance<h4 class="sub header">${(
+          contractDetails.balance / 1e8
+        ).toFixed(8)}</h4></h3>`;
+      } catch (e) {
+        document.getElementById(
+          "errMsg"
+        ).innerHTML = `<div class="header">Error</div><p>${e.message
+          ? e.message
+          : "Not logged in. Please log in to MetriMask to continue."
+        }</p>`;
+        document.getElementById("errMsg").classList.remove("hidden");
+      }
+    };
+
+
+
+    getContract();
+
+  </script>
+</body>
+
+</html>
