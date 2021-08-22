@@ -47,31 +47,31 @@ contract WrappedMetrix is ERC1363 {
     }
 
     fallback() external payable {
-        deposit();
+        wrap();
     }
 
     receive() external payable {
-        deposit();
+        wrap();
     }
 
-    function wrap(uint256 amount) private {
+    function deposit(uint256 amount) private {
         _mint(_msgSender(), amount);
     }
 
-    function unwrap(uint256 amount) private {
+    function withdraw(uint256 amount) private {
         _burn(_msgSender(), amount);
     }
 
-    function deposit() public payable {
+    function wrap() public payable {
         require(msg.value > 0);
-        wrap(msg.value);
+        deposit(msg.value);
         emit WrapMetrix(_msgSender(), msg.value);
     }
 
-    function withdraw(uint256 amount) public {
+    function unwrap(uint256 amount) public {
         uint256 startingBalance = balanceOf(_msgSender());
         require(startingBalance >= amount);
-        unwrap(amount);
+        withdraw(amount);
         require(
             balanceOf(_msgSender()) == startingBalance - amount,
             "WrappedMRX: Failed to burn Wrapped MRX"

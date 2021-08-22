@@ -70,7 +70,7 @@
   <script type="module">
     import { ethers } from "/js/ethers-5.2.esm.min.js";
 
-    const contract = "71c2f8574e7b5fb9040be8b252c3707823a9de67";
+    const contract = "d771c3791849de283bc375bb627b09e31aa3b96d";
 
     let loggedIn = false;
     let loaded = false;
@@ -235,7 +235,6 @@
                   if (v) values.push(v);
                   else values.push("");
                   if (i <= iface.functions[key].inputs.length - 1) {
-
                     const x = iface.functions[key].inputs[i++];
                     const encoded = ethers.utils.defaultAbiCoder.encode(
                       [x.type],
@@ -359,7 +358,7 @@
             field.className = "field";
             const input = document.createElement("div");
             input.className = "ui labeled input";
-            input.innerHTML = `<div class="ui label ${color} inverted">Value</div><input type="number" name="value" value="0.00000000" />`;
+            input.innerHTML = `<div class="ui label ${color} inverted">Value</div><input type="number" step="0.00000001" name="value" value="0.00000000" />`;
             field.appendChild(input);
             form.appendChild(field);
           }
