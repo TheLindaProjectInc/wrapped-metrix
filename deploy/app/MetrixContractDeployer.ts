@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 const buildDirectory = path.join(__dirname, "..", "..", "build");
 const webDirectory = path.join(__dirname, "..", "..", "public");
-const contractFile = path.join(buildDirectory, "abi", "contract.js");
+const contractFile = path.join(webDirectory, "contract.js");
 const abiFile = path.join(buildDirectory, "abi", "wrappedmetrix.json");
 const bytecodeFile = path.join(buildDirectory, "bytecode", "wrappedmetrix.hex");
 console.log(`buildDirectory: ${buildDirectory}`);
