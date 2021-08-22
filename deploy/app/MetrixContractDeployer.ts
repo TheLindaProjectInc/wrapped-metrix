@@ -97,10 +97,6 @@ class MetrixContractDeployer {
         const contracts = [];
         const iface = new utils.Interface(this.abi);
 
-        const functionSignature = (functionName: string) => {
-          const fragment = iface.getFunction(functionName);
-          return iface.getSighash(fragment).replace("0x", "");
-        };
         const eventMap = new Map();
         for (const receipt of transactionReceipt) {
           for (const log of receipt.log) {
