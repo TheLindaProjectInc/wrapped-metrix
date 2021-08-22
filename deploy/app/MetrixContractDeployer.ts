@@ -58,7 +58,7 @@ class MetrixContractDeployer {
     this.bytecode = fs.readFileSync(bytecodeFile).toString();
   }
 
-  public async deploy() {
+  public async deploy(): Promise<void> {
     const deployment = await this.mrpc.promiseCreateContract(
       this.bytecode,
       Number(process.env.GAS_LIMIT),
@@ -66,37 +66,55 @@ class MetrixContractDeployer {
       process.env.DEPLOYMENT_ACCT as string
     );
     if (deployment) {
-      //console.log(JSON.stringify(deployment, null, 2));
-      const { txid, sender, hash160, address } = deployment;
+      try {
+        const { txid, sender, hash160, address } = deployment;
 
-      let transaction = await this.mrpc.promiseGetTransaction(txid);
-      let transactionReceipt = await this.mrpc.promiseGetTransactionReceipt(
-        txid
-      );
-      console.log(JSON.stringify(transaction));
-      console.log(JSON.stringify(transactionReceipt));
-      while (
-        transactionReceipt.length < 1 ||
-        (transaction.confirmations < 1 && transaction.confirmations > -1)
-      ) {
-        console.log("Waiting for the transaction to confirm");
-        await new Promise((resolve) => setTimeout(resolve, 60000));
-        transaction = await this.mrpc.promiseGetTransaction(txid);
-        transactionReceipt = await this.mrpc.promiseGetTransactionReceipt(txid);
-      }
-      for (const receipt of transactionReceipt) {
-        if (
-          receipt.excepted == "OutOfGas" ||
-          receipt.excepted == "OutOfGasIntrinsic"
+        let transaction = await this.mrpc.promiseGetTransaction(txid);
+        let transactionReceipt = await this.mrpc.promiseGetTransactionReceipt(
+          txid
+        );
+        console.log(
+          `txid: ${transaction.txid} confirmations: ${transaction.confirmations}`
+        );
+        console.log(`receipt: ${JSON.stringify(transactionReceipt, null, 2)}`);
+        while (
+          transactionReceipt.length < 1 ||
+          (transaction.confirmations < 1 && transaction.confirmations > -1)
         ) {
-          console.log(`Failed, ${receipt.excepted}`);
-          console.log(JSON.stringify(transactionReceipt));
-        } else {
-          console.log("Success!");
-          console.log(
-            `txid: ${txid}\nsender: ${sender}\nhash160: ${hash160}\naddress: ${address}`
+          console.log("Waiting for the transaction to confirm");
+          await new Promise((resolve) => setTimeout(resolve, 60000));
+          transaction = await this.mrpc.promiseGetTransaction(txid);
+          transactionReceipt = await this.mrpc.promiseGetTransactionReceipt(
+            txid
           );
         }
+        console.log(
+          `txid: ${transaction.txid} confirmations: ${transaction.confirmations}`
+        );
+        if (transaction.confirmations == -1) {
+          console.log(`Failed, transaction orphaned`);
+          return;
+        }
+        for (const receipt of transactionReceipt) {
+          console.log(
+            `receipt: ${JSON.stringify(transactionReceipt, null, 2)}`
+          );
+          if (
+            receipt.excepted == "OutOfGas" ||
+            receipt.excepted == "OutOfGasIntrinsic"
+          ) {
+            console.log(`Failed, ${receipt.excepted}`);
+          } else {
+            console.log("Success!");
+            console.log(
+              `txid: ${txid}\nsender: ${sender}\nhash160: ${hash160}\naddress: ${address}`
+            );
+          }
+        }
+      } catch (e) {
+        console.log(
+          `Failed, ${e.message ? e.message : "An unknown error occurred"}`
+        );
       }
     }
   }
