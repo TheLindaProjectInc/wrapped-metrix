@@ -7,6 +7,8 @@ import {
 import fs from "fs";
 import path from "path";
 const buildDirectory = path.join(__dirname, "..", "..", "build");
+const webDirectory = path.join(__dirname, "..", "..", "public");
+const contractFile = path.join(buildDirectory, "abi", "contract.js");
 const abiFile = path.join(buildDirectory, "abi", "wrappedmetrix.json");
 const bytecodeFile = path.join(buildDirectory, "bytecode", "wrappedmetrix.hex");
 console.log(`buildDirectory: ${buildDirectory}`);
@@ -95,6 +97,7 @@ class MetrixContractDeployer {
           console.log(`Failed, transaction orphaned`);
           return;
         }
+        const contracts = [];
         for (const receipt of transactionReceipt) {
           console.log(
             `receipt: ${JSON.stringify(transactionReceipt, null, 2)}`
@@ -105,10 +108,18 @@ class MetrixContractDeployer {
           ) {
             console.log(`Failed, ${receipt.excepted}`);
           } else {
+            const contract = receipt.contractAddress;
+            if (contracts.indexOf(contract) == -1) contracts.push(contract);
             console.log("Success!");
             console.log(
               `txid: ${txid}\nsender: ${sender}\nhash160: ${hash160}\naddress: ${address}`
             );
+            if (fs.existsSync(webDirectory)) {
+              fs.writeFileSync(
+                path.resolve(webDirectory, contractFile),
+                `const contract = "${contract}";`
+              );
+            }
           }
         }
       } catch (e) {
