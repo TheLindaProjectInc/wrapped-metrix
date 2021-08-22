@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "buildTs": "tsc --listEmittedFiles",
-    "buildSol": "node compile.js",
+    "buildSol": "node compile/index.js",
     "build": "npm run buildSol && npm run buildTs",
     "deploy": "node dist/index.js",
     "web": "serve ./public"

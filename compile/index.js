@@ -2,9 +2,9 @@ const solc = require('solc');
 const path = require('path');
 const fs = require('fs-extra');
 
-const buildPath = path.resolve(__dirname, 'build');
+const buildPath = path.resolve(__dirname, '..', 'build');
 let sources = new Map();
-const contractsPath = path.resolve(__dirname, 'contracts');
+const contractsPath = path.resolve(__dirname, '..', 'contracts');
 
 function findImports(path) {
   if (sources.has(path.replace(/^.*[\\\/]/, '')))
