@@ -102,9 +102,6 @@ try {
               JSON.stringify(output[contract][c][Object.keys(output[contract][c])[0]].abi, null, 2)
             );
             console.log(`Writing ${path.resolve(buildPath, "functions", fileName)}`);
-            console.log(JSON.stringify(
-              output[contract][c][Object.keys(output[contract][c])[0]].evm.methodIdentifiers
-            ))
             fs.writeFileSync(
               path.resolve(buildPath, "functions", fileName),
               JSON.stringify(output[contract][c][Object.keys(output[contract][c])[0]].evm.methodIdentifiers, null, 2)
