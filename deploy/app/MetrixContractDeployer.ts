@@ -1,8 +1,5 @@
-import {
-  MetrixRPC_RawTx,
-  MetrixRPC_SignRawTx,
-  MetrixRPCNode,
-} from "../lib/MetrixRPC/MetrixRPC";
+import { MetrixRPCNode } from "../lib/MetrixRPC/MetrixRPC";
+import ethers from "ethers";
 
 import fs from "fs";
 import path from "path";
@@ -98,7 +95,29 @@ class MetrixContractDeployer {
           return;
         }
         const contracts = [];
+        const iface = new ethers.utils.Interface(this.abi);
+
+        const functionSignature = (functionName: string) => {
+          const fragment = iface.getFunction(functionName);
+          return iface.getSighash(fragment).replace("0x", "");
+        };
+        const eventMap = new Map();
         for (const receipt of transactionReceipt) {
+          for (const log of receipt.log) {
+            const topics = log.topics.map((topic: string) => {
+              return `0x${topic}`;
+            });
+            const data = `0x${log.data}`;
+            const description = iface.parseLog({ data, topics });
+            const event = description.eventFragment;
+
+            if (description && event) {
+              const name = event.name;
+              let events = eventMap.get(name) ? eventMap.get(name) : [];
+              events.push({ event, description, timestamp: log.timestamp });
+              eventMap.set(name, events);
+            }
+          }
           console.log(
             `receipt: ${JSON.stringify(transactionReceipt, null, 2)}`
           );
@@ -120,6 +139,11 @@ class MetrixContractDeployer {
                 `const contract = "${contract}";`
               );
             }
+          }
+        }
+        for (const key of eventMap.keys()) {
+          for (const event of eventMap.get(key) ? eventMap.get(key) : []) {
+            console.log(JSON.stringify(event, null, 2));
           }
         }
       } catch (e) {
