@@ -1,5 +1,5 @@
 import { MetrixRPCNode } from "../lib/MetrixRPC/MetrixRPC";
-import ethers from "ethers";
+import { utils } from "ethers";
 
 import fs from "fs";
 import path from "path";
@@ -95,7 +95,7 @@ class MetrixContractDeployer {
           return;
         }
         const contracts = [];
-        const iface = new ethers.utils.Interface(this.abi);
+        const iface = new utils.Interface(this.abi);
 
         const functionSignature = (functionName: string) => {
           const fragment = iface.getFunction(functionName);
