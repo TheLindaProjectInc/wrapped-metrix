@@ -1,4 +1,4 @@
-[![GitHub license](https://img.shields.io/github/license/TheLindaProjectInc/wrapped-metrix)](https://github.com/TheLindaProjectInc/wrapped-metrix/blob/main/LICENSE.md) [![Node.js CI](https://github.com/TheLindaProjectInc/wrapped-metrix/actions/workflows/node.js.yml/badge.svg)](https://github.com/TheLindaProjectInc/wrapped-metrix/actions/workflows/node.js.yml)
+[![GitHub license](https://img.shields.io/github/license/TheLindaProjectInc/wrapped-metrix)](https://github.com/TheLindaProjectInc/wrapped-metrix/blob/master/LICENSE.md) [![Node.js CI](https://github.com/TheLindaProjectInc/wrapped-metrix/actions/workflows/node.js.yml/badge.svg)](https://github.com/TheLindaProjectInc/wrapped-metrix/actions/workflows/node.js.yml)
 
 # Wrapped Metrix
 
