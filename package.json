@@ -18,7 +18,7 @@
     "@types/node": "^16.10.2",
     "serve": "^12.0.1",
     "solc": "^0.8.7-fixed",
-    "typescript": "^4.3.5"
+    "typescript": "^4.5.2"
   },
   "dependencies": {
     "dotenv": "^10.0.0",
